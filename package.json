@@ -51,6 +51,8 @@
     "@babel/traverse": "^7.24.0",
     "java-ast": "^0.3.0",
     "java-parser": "~2.2.0",
-    "jsonpath": "^1.1.1"
+    "jsonpath": "^1.1.1",
+    "langchain": "^0.1.28",
+    "ollama-node": "^0.1.27"
   }
 }

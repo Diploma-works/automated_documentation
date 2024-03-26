@@ -20,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
 		);
 
 		const methodsWithContent = getMethodsWithContent(new TextDecoder().decode(javaFileContent));
-		const documentPattern = createMarkdownDocumentationPattern(methodsWithContent);
+		const documentPattern = await createMarkdownDocumentationPattern(methodsWithContent);
 		let rootLink;
 		if (vscode.workspace.workspaceFolders != undefined) {
 			rootLink = vscode.workspace.workspaceFolders[0].uri.fsPath + '/documentation.md';
