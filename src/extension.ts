@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getMethodsWithContent } from './parser';
-import { createMarkdownDocumentationPattern } from './file'
+import { createMarkdownDocumentationPattern } from './file';
 import { loadSourceCodeFilesToVector } from './ai';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const methodsWithContent = getMethodsWithContent(new TextDecoder().decode(javaFileContent));
 		const documentPattern = await createMarkdownDocumentationPattern(methodsWithContent);
 		let rootLink;
-		if (vscode.workspace.workspaceFolders != undefined) {
+		if (vscode.workspace.workspaceFolders !== undefined) {
 			rootLink = vscode.workspace.workspaceFolders[0].uri.fsPath + '/documentation.md';
 			await vscode.workspace.fs.writeFile(
 				vscode.Uri.parse(rootLink), new TextEncoder().encode(documentPattern)

@@ -4,37 +4,46 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { createClient } from "@supabase/supabase-js";
 import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
+import { ChatOllama } from "@langchain/community/chat_models/ollama";
+import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
+
 import {
     ChatPromptTemplate,
     MessagesPlaceholder,
-    AIMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-} from "@langchain/core/prompts";
-import { RunnableSequence } from "@langchain/core/runnables";
-import { formatDocumentsAsString } from "langchain/util/document";
-import { BaseMessage } from "langchain/schema";
-import { StringOutputParser } from "@langchain/core/output_parsers";
+    PromptTemplate
+  } from "@langchain/core/prompts";
 import { Ollama } from "@langchain/community/llms/ollama";
-import dotenv from 'dotenv';
+import { RunnableSequence } from "langchain/runnables";
+import { formatDocumentsAsString } from "langchain/util/document";
+import { StringOutputParser } from "langchain/schema/output_parser";
+import { createRetrievalChain } from "langchain/chains/retrieval";
+
+
+// const ollama = new Ollama({
+//     baseUrl: "http://localhost:11434",
+//     model: "gemma:2b",
+// }).pipe(
+//     new StringOutputParser()
+// );
 
 const ollama = new Ollama({
     baseUrl: "http://localhost:11434",
     model: "gemma:2b",
-}).pipe(
-    new StringOutputParser()
-);
+});
 
 const ollamaEmbeddings = new OllamaEmbeddings({
     model: "gemma:2b",
     baseUrl: "http://localhost:11434",
 });
 
-async function getGeneratedDocumentation(methodContent: string) {
-    const privateKey = process.env.SUPABASE_KEY;
-    if (!privateKey) throw new Error(`Expected env var SUPABASE_KEY`);
-    const url = process.env.SUPABASE_URL;
-    if (!url) throw new Error(`Expected env var SUPABASE_URL`);
+
+async function getGeneratedDocumentation(methodName: string, methodContent: string) {
+    const privateKey = "";
+    if (!privateKey) {throw new Error(`Expected env var SUPABASE_KEY`);}
+    const url = "";
+    if (!url) {throw new Error(`Expected env var SUPABASE_URL`);}
     const client = createClient(url, privateKey);
+
     const vectorStore = await SupabaseVectorStore.fromExistingIndex(
         ollamaEmbeddings,
         {
@@ -44,32 +53,82 @@ async function getGeneratedDocumentation(methodContent: string) {
         }
     );
 
-    const retriever = vectorStore.asRetriever({
-        searchType: "mmr",
-        searchKwargs: { fetchK: 5 },
+    const retriever = vectorStore.asRetriever(2);
+
+    // for test
+    const relevantDocs = await retriever.getRelevantDocuments(methodName);
+
+    const useCasePrompt = PromptTemplate.fromTemplate(
+            `Given the name of the method and the pieces of code, where the method is used, formulate use cases when this method can be called,
+            and provide one or two examples from the pieces of code. If no pieces are provided, answer: "No use cases found".
+            Name of the method: {input}.
+            Pieces of code, where the method is used:
+            <context>
+            {context}
+            </context>`
+    );
+
+    const useCaseChain = await createStuffDocumentsChain({
+        llm: ollama,
+        prompt: useCasePrompt,
     });
 
-    const combineDocumentsPrompt = ChatPromptTemplate.fromMessages([
-        AIMessagePromptTemplate.fromTemplate(
-            "Use the following pieces of context to perform the instuction at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer.\n\n{context}\n\n"
-        ),
-        HumanMessagePromptTemplate.fromTemplate("Instuction: write documentation for the following Java method: {method}"),
-    ]);
+    const retrievalChain = await createRetrievalChain({
+        combineDocsChain: useCaseChain,
+        retriever: retriever,
+    });
 
-    const combineDocumentsChain = RunnableSequence.from([
-        {
-            method: (output: string) => output,
-            context: async (output: string) => {
-                const relevantDocs = await retriever.getRelevantDocuments(output);
-                return formatDocumentsAsString(relevantDocs);
-            },
-        },
-        combineDocumentsPrompt,
-        ollama,
-        new StringOutputParser(),
-    ]);
+    const result = await retrievalChain.invoke({
+        input: methodName
+    });
 
-    const result = await combineDocumentsChain.invoke(methodContent);
+    // const documentationPrompt = ChatPromptTemplate.fromMessages([
+    //     AIMessagePromptTemplate.fromTemplate(`You are a world class technical documentation writer. Write documentation for the Java method given below. The documentation must consist of the following parts:
+    //         Name of the method
+    //         General Description - describe method in no more than 2 sentences
+    //         Use Cases - insert here information about Use Cases below without changes
+    //         Logic of the method - describe the most significant parts of method in no more than 6 sentences
+    //         Areas for Improvement
+    //         Name of the method: {methodName}
+    //         The method: {methodCode}`),
+    //     AIMessagePromptTemplate.fromTemplate(`Use Cases: {useCases}`),
+    // ]);
+
+    // // 2. write docu with context
+    // const documentationChain = RunnableSequence.from([
+    //     {
+    //         usingContext: useCaseChain,
+    //         methodName: (input) => input.methodName,
+    //         methodCode: (input) => input.methodCode,
+    //     },
+    //     documentationPrompt,
+    //     ollama,
+    //     new StringOutputParser(),
+    // ]);
+
+    //1. get context
+    // const useCaseChain = RunnableSequence.from([
+    //     {
+    //         input: (input) => input.methodName,
+    //         context: async (input) => {
+    //             const relevantDocs = await retriever.getRelevantDocuments(input.methodName);
+    //             return formatDocumentsAsString(relevantDocs);
+    //         },
+    //     },
+    //     useCasePrompt,
+    //     ollama,
+    //     new StringOutputParser(),
+    //     //documentationChain
+    // ]);
+
+    // // 0. 
+    // const result = await useCaseChain.invoke({
+    //     methodName: methodName,
+    //     methodCode: methodContent
+    // });
+
+    // let kek = result;
+
     return result;
 }
 
@@ -87,14 +146,17 @@ async function loadSourceCodeFilesToVector(directoryPath: string) {
         chunkOverlap: 500,
     });
     const texts = await javaSplitter.splitDocuments(docs);
-    console.log("Loaded ", texts.length, " documents.");
 
     const privateKey = "";
-    if (!privateKey) throw new Error(`Expected env var SUPABASE_KEY`);
-    const url ="";
-    if (!url) throw new Error(`Expected env var SUPABASE_URL`);
+    if (!privateKey) {throw new Error(`Expected env var SUPABASE_KEY`);}
+    const url = "";
+    if (!url) {throw new Error(`Expected env var SUPABASE_URL`);}
     const client = createClient(url, privateKey);
-    const vectorStore = await SupabaseVectorStore.fromDocuments(
+    
+    // use embedding model to ingest documents into a vectorstore
+    // vectorstore class will automatically prepare each raw document using the embeddings model
+    // we have this data indexed in a vectorstore
+    await SupabaseVectorStore.fromDocuments(
         texts,
         ollamaEmbeddings,
         {
@@ -103,7 +165,7 @@ async function loadSourceCodeFilesToVector(directoryPath: string) {
             queryName: "match_documents",
         }
     );
-    console.log("Loaded project to SUPABASE");
+
 }
 
-export { getGeneratedDocumentation, loadSourceCodeFilesToVector }
+export { getGeneratedDocumentation, loadSourceCodeFilesToVector };
