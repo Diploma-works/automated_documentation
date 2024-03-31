@@ -20,7 +20,7 @@
       },
       {
         "command": "automated-documentation-for-java.loadProjectToMemory",
-        "title": "Load The Project to Memory"
+        "title": "Load The Folder to Memory"
       }
     ],
     "menus": {
@@ -36,7 +36,43 @@
           "group": "5_cutcopypaste"
         }
       ]
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "automated-docu",
+        "title": "Automated documentation for Java with Ollama",
+        "description": "How to set the extension",
+        "steps": [
+					{
+						"id": "install-ollama",
+						"title": "Install Ollama",
+						"description": "Install Ollama locally\n[Go to install](https://ollama.com/)",
+						"media": {
+							"image": "media/image.png",
+							"altText": "Empty image"
+						}
+					},
+					{
+						"id": "supabase",
+						"title": "Create Supabase Profile",
+						"description": "Create Subabase profile to get your private URL and key\n[Create](https://supabase.com/)",
+						"media": {
+							"image": "media/image.png",
+							"altText": "Empty image"
+						}
+					},
+          {
+						"id": "supabase",
+						"title": "Create Table in Supabase",
+						"description": "Create tables\n[Create](https://supabase.com/)",
+						"media": {
+							"image": "media/image.png",
+							"altText": "Empty image"
+						}
+					}
+				]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
