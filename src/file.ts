@@ -1,14 +1,16 @@
-import { getGeneratedDocumentation } from './ai';
+import { getGeneratedDocumentation, getGeneratedUseCase } from './ai';
 
 async function createMarkdownDocumentationPattern(methodsWithContent: Map<string, string>) {
 
     let resultPattern = "";
     for (let [key, value] of methodsWithContent) {
-        resultPattern += `### Метод ${key}\n\n`;
+        resultPattern += `### Method ${key}\n\n`;
 
-        const result = await getGeneratedDocumentation(key, value);
+        const useCase = await getGeneratedUseCase(key, value);
+        const documentation = await getGeneratedDocumentation(key, value);
 
-        resultPattern += `Содержание метода:\n\n \`\`\`\n${result}\n\n \`\`\`\n\n`;
+        resultPattern += `#### Use cases:\n\n\n${useCase}\n\n\n`;
+        resultPattern += `#### Information:\n\n\n${documentation}\n\n\n\n`;
     }
 
     return resultPattern;

@@ -4,132 +4,81 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { createClient } from "@supabase/supabase-js";
 import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
-import { ChatOllama } from "@langchain/community/chat_models/ollama";
-import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
-
-import {
-    ChatPromptTemplate,
-    MessagesPlaceholder,
-    PromptTemplate
-  } from "@langchain/core/prompts";
-import { Ollama } from "@langchain/community/llms/ollama";
-import { RunnableSequence } from "langchain/runnables";
 import { formatDocumentsAsString } from "langchain/util/document";
-import { StringOutputParser } from "langchain/schema/output_parser";
-import { createRetrievalChain } from "langchain/chains/retrieval";
 
-
-// const ollama = new Ollama({
-//     baseUrl: "http://localhost:11434",
-//     model: "gemma:2b",
-// }).pipe(
-//     new StringOutputParser()
-// );
-
-const ollama = new Ollama({
-    baseUrl: "http://localhost:11434",
-    model: "gemma:2b",
-});
 
 const ollamaEmbeddings = new OllamaEmbeddings({
-    model: "gemma:2b",
+    model: "codellama:7b",
     baseUrl: "http://localhost:11434",
 });
 
 
-async function getGeneratedDocumentation(methodName: string, methodContent: string) {
+async function getGeneratedUseCase(methodName: string, methodContent: string) {
     const privateKey = "";
-    if (!privateKey) {throw new Error(`Expected env var SUPABASE_KEY`);}
+    if (!privateKey) { throw new Error(`No value for SUPABASE KEY`); }
     const url = "";
-    if (!url) {throw new Error(`Expected env var SUPABASE_URL`);}
-    const client = createClient(url, privateKey);
+    if (!url) { throw new Error(`No value for SUPABASE URL`); }
+    const supabaseClient = createClient(url, privateKey);
 
     const vectorStore = await SupabaseVectorStore.fromExistingIndex(
         ollamaEmbeddings,
         {
-            client,
+            client: supabaseClient,
             tableName: "documents",
             queryName: "match_documents",
         }
     );
+    const relevantDocs = await vectorStore.similaritySearch(`.${methodName}(`, 4);
+    const formattedRelevantDocs: string = formatDocumentsAsString(relevantDocs);
+    console.log(`FOUND DOCS: ${formattedRelevantDocs}`);
 
-    const retriever = vectorStore.asRetriever(2);
-
-    // for test
-    const relevantDocs = await retriever.getRelevantDocuments(methodName);
-
-    const useCasePrompt = PromptTemplate.fromTemplate(
-            `Given the name of the method and the pieces of code, where the method is used, formulate use cases when this method can be called,
-            and provide one or two examples from the pieces of code. If no pieces are provided, answer: "No use cases found".
-            Name of the method: {input}.
-            Pieces of code, where the method is used:
-            <context>
-            {context}
-            </context>`
-    );
-
-    const useCaseChain = await createStuffDocumentsChain({
-        llm: ollama,
-        prompt: useCasePrompt,
+    const useCasePrompt = `There is the code of the project:
+        <code>
+        ${formattedRelevantDocs}
+        <code>
+        Based on the usage of the method in the code, write enumerated list of use cases, when method ${methodName} can be used in the project.
+        Enumerated list:`;
+    
+    const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+            model: 'codellama:7b',
+            prompt: useCasePrompt,
+            stream: false
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+        },
     });
 
-    const retrievalChain = await createRetrievalChain({
-        combineDocsChain: useCaseChain,
-        retriever: retriever,
+    const data: any = await response.json();
+
+    return data.response;
+}
+
+async function getGeneratedDocumentation(methodName: string, methodContent: string) {
+    const documentationPrompt = `There is the code of the method ${methodName}:
+        <code>
+        ${methodContent}
+        <code>
+        Based on the the code, write technical documentation for the method.
+        Technical documentation:`;
+    
+    const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+            model: 'codellama:7b',
+            prompt: documentationPrompt,
+            stream: false
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+        },
     });
 
-    const result = await retrievalChain.invoke({
-        input: methodName
-    });
+    const data: any = await response.json();
 
-    // const documentationPrompt = ChatPromptTemplate.fromMessages([
-    //     AIMessagePromptTemplate.fromTemplate(`You are a world class technical documentation writer. Write documentation for the Java method given below. The documentation must consist of the following parts:
-    //         Name of the method
-    //         General Description - describe method in no more than 2 sentences
-    //         Use Cases - insert here information about Use Cases below without changes
-    //         Logic of the method - describe the most significant parts of method in no more than 6 sentences
-    //         Areas for Improvement
-    //         Name of the method: {methodName}
-    //         The method: {methodCode}`),
-    //     AIMessagePromptTemplate.fromTemplate(`Use Cases: {useCases}`),
-    // ]);
-
-    // // 2. write docu with context
-    // const documentationChain = RunnableSequence.from([
-    //     {
-    //         usingContext: useCaseChain,
-    //         methodName: (input) => input.methodName,
-    //         methodCode: (input) => input.methodCode,
-    //     },
-    //     documentationPrompt,
-    //     ollama,
-    //     new StringOutputParser(),
-    // ]);
-
-    //1. get context
-    // const useCaseChain = RunnableSequence.from([
-    //     {
-    //         input: (input) => input.methodName,
-    //         context: async (input) => {
-    //             const relevantDocs = await retriever.getRelevantDocuments(input.methodName);
-    //             return formatDocumentsAsString(relevantDocs);
-    //         },
-    //     },
-    //     useCasePrompt,
-    //     ollama,
-    //     new StringOutputParser(),
-    //     //documentationChain
-    // ]);
-
-    // // 0. 
-    // const result = await useCaseChain.invoke({
-    //     methodName: methodName,
-    //     methodCode: methodContent
-    // });
-
-    // let kek = result;
-
-    return result;
+    return data.response;
 }
 
 
@@ -148,11 +97,11 @@ async function loadSourceCodeFilesToVector(directoryPath: string) {
     const texts = await javaSplitter.splitDocuments(docs);
 
     const privateKey = "";
-    if (!privateKey) {throw new Error(`Expected env var SUPABASE_KEY`);}
+    if (!privateKey) { throw new Error(`No value for SUPABASE_KEY`); }
     const url = "";
-    if (!url) {throw new Error(`Expected env var SUPABASE_URL`);}
+    if (!url) { throw new Error(`No value for SUPABASE_URL`); }
     const client = createClient(url, privateKey);
-    
+
     // use embedding model to ingest documents into a vectorstore
     // vectorstore class will automatically prepare each raw document using the embeddings model
     // we have this data indexed in a vectorstore
@@ -168,4 +117,4 @@ async function loadSourceCodeFilesToVector(directoryPath: string) {
 
 }
 
-export { getGeneratedDocumentation, loadSourceCodeFilesToVector };
+export { getGeneratedUseCase, loadSourceCodeFilesToVector, getGeneratedDocumentation };

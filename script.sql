@@ -6,12 +6,12 @@ create table documents (
   id bigserial primary key,
   content text, -- corresponds to Document.pageContent
   metadata jsonb, -- corresponds to Document.metadata
-  embedding vector(2048) -- for gemma:2b
+  embedding vector(4096) -- for gemma:2b 2048
 );
 
 -- Create a function to search for documents
 create function match_documents (
-  query_embedding vector(2048),
+  query_embedding vector(4096),
   match_count int DEFAULT null,
   filter jsonb DEFAULT '{}'
 ) returns table (
