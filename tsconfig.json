@@ -1,7 +1,6 @@
 {
 	"extends": "@tsconfig/node20/tsconfig.json",
 	"compilerOptions": {
-		"module": "node16",
 		"moduleResolution": "nodenext",
 		"target": "es2022",
 		"outDir": "out",

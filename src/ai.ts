@@ -8,17 +8,15 @@ import { formatDocumentsAsString } from "langchain/util/document";
 
 
 const ollamaEmbeddings = new OllamaEmbeddings({
-    model: "codellama:7b",
+    model: "phi3:instruct",
     baseUrl: "http://localhost:11434",
 });
 
 
-async function getGeneratedUseCase(methodName: string, methodContent: string) {
-    const privateKey = "";
-    if (!privateKey) { throw new Error(`No value for SUPABASE KEY`); }
-    const url = "";
-    if (!url) { throw new Error(`No value for SUPABASE URL`); }
-    const supabaseClient = createClient(url, privateKey);
+async function getGeneratedUseCase(methodName: string, supabaseUrl: string, supabaseKey: string) {
+    if (!supabaseKey) { throw new Error(`No value for SUPABASE KEY`); }
+    if (!supabaseUrl) { throw new Error(`No value for SUPABASE URL`); }
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     const vectorStore = await SupabaseVectorStore.fromExistingIndex(
         ollamaEmbeddings,
@@ -42,7 +40,7 @@ async function getGeneratedUseCase(methodName: string, methodContent: string) {
     const response = await fetch('http://localhost:11434/api/generate', {
         method: 'POST',
         body: JSON.stringify({
-            model: 'codellama:7b',
+            model: 'phi3:instruct',
             prompt: useCasePrompt,
             stream: false
         }),
@@ -67,7 +65,7 @@ async function getGeneratedDocumentation(methodName: string, methodContent: stri
     const response = await fetch('http://localhost:11434/api/generate', {
         method: 'POST',
         body: JSON.stringify({
-            model: 'codellama:7b',
+            model: 'phi3:instruct',
             prompt: documentationPrompt,
             stream: false
         }),
@@ -82,7 +80,7 @@ async function getGeneratedDocumentation(methodName: string, methodContent: stri
 }
 
 
-async function loadSourceCodeFilesToVector(directoryPath: string) {
+async function loadSourceCodeFilesToVector(directoryPath: string, supabaseUrl: string, supabaseKey: string) {
     const loader = new DirectoryLoader(
         `${directoryPath}`,
         {
@@ -96,11 +94,9 @@ async function loadSourceCodeFilesToVector(directoryPath: string) {
     });
     const texts = await javaSplitter.splitDocuments(docs);
 
-    const privateKey = "";
-    if (!privateKey) { throw new Error(`No value for SUPABASE_KEY`); }
-    const url = "";
-    if (!url) { throw new Error(`No value for SUPABASE_URL`); }
-    const client = createClient(url, privateKey);
+    if (!supabaseKey) { throw new Error(`No value for SUPABASE_KEY`); }
+    if (!supabaseUrl) { throw new Error(`No value for SUPABASE_URL`); }
+    const client = createClient(supabaseUrl, supabaseKey);
 
     // use embedding model to ingest documents into a vectorstore
     // vectorstore class will automatically prepare each raw document using the embeddings model

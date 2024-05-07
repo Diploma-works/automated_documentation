@@ -1,14 +1,28 @@
 import * as vscode from 'vscode';
 import { getMethodsWithContent } from './parser';
-import { createMarkdownDocumentationPattern } from './file';
+import { Configuration, createMarkdownDocumentationPattern } from './file';
 import { loadSourceCodeFilesToVector } from './ai';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
 	console.log('Congratulations, your extension "automated-documentation-for-java" is now active!');
 
 	let disposableGenerate = vscode.commands.registerCommand('automated-documentation-for-java.generateDocumentationFile', async (fileUri) => {
 
+		let settingsFileUrl = vscode.workspace.workspaceFolders![0].uri.fsPath + '/doc.json';
+		const settingsFileContent = await vscode.workspace.fs.readFile(
+			vscode.Uri.parse(settingsFileUrl)
+		);
+
+		const credentials: Configuration = JSON.parse(new TextDecoder().decode(settingsFileContent));
+
+		if (credentials.supabaseKey === '' || credentials.supabaseKey === undefined) {
+			vscode.window.showErrorMessage('Supabase API Key and Database URL are mandatory to execute this action! Check yout configuration file doc.json');
+		}
+		if (credentials.supabaseUrl === '' || credentials.supabaseUrl === undefined) {
+			vscode.window.showErrorMessage('Supabase API Key and Database URL are mandatory to execute this action! Check yout configuration file doc.json');
+		}
+		
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
 			title: "Generating documentation for file...",
@@ -46,14 +60,12 @@ export function activate(context: vscode.ExtensionContext) {
 				);
 
 				const methodsWithContent = getMethodsWithContent(new TextDecoder().decode(javaFileContent));
-				const documentPattern = await createMarkdownDocumentationPattern(methodsWithContent);
+				const documentPattern = await createMarkdownDocumentationPattern(methodsWithContent, credentials.supabaseUrl, credentials.supabaseKey);
 				let rootLink;
-				if (vscode.workspace.workspaceFolders !== undefined) {
-					rootLink = vscode.workspace.workspaceFolders[0].uri.fsPath + '/documentation.md';
-					await vscode.workspace.fs.writeFile(
-						vscode.Uri.parse(rootLink), new TextEncoder().encode(documentPattern)
-					);
-				}
+				rootLink = vscode.workspace.workspaceFolders![0].uri.fsPath + '/documentation.md';
+				await vscode.workspace.fs.writeFile(
+					vscode.Uri.parse(rootLink), new TextEncoder().encode(documentPattern)
+				);
 
 				vscode.window.showInformationMessage('Documentation file was generated!');
 				resolve();
@@ -63,6 +75,20 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	let disposableLoad = vscode.commands.registerCommand('automated-documentation-for-java.loadProjectToMemory', async (dirUri) => {
+
+		let settingsFileUrl = vscode.workspace.workspaceFolders![0].uri.fsPath + '/doc.json';
+		const settingsFileContent = await vscode.workspace.fs.readFile(
+			vscode.Uri.parse(settingsFileUrl)
+		);
+
+		const credentials: Configuration = JSON.parse(new TextDecoder().decode(settingsFileContent));
+
+		if (credentials.supabaseKey === '' || credentials.supabaseKey === undefined) {
+			vscode.window.showErrorMessage('Supabase API Key and Database URL are mandatory to execute this action! Check yout configuration file doc.json');
+		}
+		if (credentials.supabaseUrl === '' || credentials.supabaseUrl === undefined) {
+			vscode.window.showErrorMessage('Supabase API Key and Database URL are mandatory to execute this action! Check yout configuration file doc.json');
+		}
 
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
@@ -100,9 +126,9 @@ export function activate(context: vscode.ExtensionContext) {
 					dirUri,
 					vscode.Uri.parse(`${__dirname}/sourcecode`)
 				);
-		
+
 				try {
-					await loadSourceCodeFilesToVector(`${__dirname}/sourcecode`);
+					await loadSourceCodeFilesToVector(`${__dirname}/sourcecode`, credentials.supabaseUrl, credentials.supabaseKey);
 					await vscode.workspace.fs.delete(
 						vscode.Uri.parse(`${__dirname}/sourcecode`),
 						{
