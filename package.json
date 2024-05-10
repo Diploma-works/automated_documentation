@@ -48,25 +48,34 @@
 						"title": "Install Ollama",
 						"description": "Install Ollama locally\n[Go to install](https://ollama.com/)",
 						"media": {
-							"image": "media/image.png",
+							"image": "media/ollama.png",
+							"altText": "Empty image"
+						}
+					},
+          {
+						"id": "install-model",
+						"title": "Install LLM",
+						"description": "Run command `ollama run phi3:instruct`",
+						"media": {
+							"image": "media/phi.png",
 							"altText": "Empty image"
 						}
 					},
 					{
 						"id": "supabase",
 						"title": "Create Supabase Profile",
-						"description": "Create Subabase profile to get your private URL and key\n[Create](https://supabase.com/)",
+						"description": "Create Subabase profile to get your private URL and API key\n[Create](https://supabase.com/)",
 						"media": {
-							"image": "media/image.png",
+							"image": "media/supabase_enter.png",
 							"altText": "Empty image"
 						}
 					},
           {
-						"id": "supabase",
-						"title": "Create Table in Supabase",
-						"description": "Create tables\n[Create](https://supabase.com/)",
+						"id": "fill-credentials",
+						"title": "Get your Supabase credentials",
+						"description": "Go to Project Settings -> API. Copy your project URL and API key. Create file doc.json in your project root, and fill it: \n{\n\t\"supabaseKey\": \"<API key>\",\n\t\"supabaseUrl\": \"https://<your URL>.supabase.co\"\n}",
 						"media": {
-							"image": "media/image.png",
+							"image": "media/supabase.jpg",
 							"altText": "Empty image"
 						}
 					}

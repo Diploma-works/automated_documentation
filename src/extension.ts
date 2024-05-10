@@ -62,7 +62,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				const methodsWithContent = getMethodsWithContent(new TextDecoder().decode(javaFileContent));
 				const documentPattern = await createMarkdownDocumentationPattern(methodsWithContent, credentials.supabaseUrl, credentials.supabaseKey);
 				let rootLink;
-				rootLink = vscode.workspace.workspaceFolders![0].uri.fsPath + '/documentation.md';
+				rootLink = vscode.workspace.workspaceFolders![0].uri.fsPath + `/documentation/${methodsWithContent[0].className}.md`;
 				await vscode.workspace.fs.writeFile(
 					vscode.Uri.parse(rootLink), new TextEncoder().encode(documentPattern)
 				);
