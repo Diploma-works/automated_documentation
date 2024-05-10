@@ -64,10 +64,18 @@
 					{
 						"id": "supabase",
 						"title": "Create Supabase Profile",
-						"description": "Create Subabase profile to get your private URL and API key\n[Create](https://supabase.com/)",
+						"description": "Create Subabase profile\n[Create](https://supabase.com/)",
 						"media": {
 							"image": "media/supabase_enter.png",
 							"altText": "Empty image"
+						}
+					},
+          {
+						"id": "database",
+						"title": "Create Supabase Database",
+						"description": "Create Subabase database to keep your project",
+						"media": {
+							"markdown": "media/scripts.md"
 						}
 					},
           {
