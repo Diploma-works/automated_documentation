@@ -72,8 +72,8 @@
 					},
           {
 						"id": "database",
-						"title": "Create Supabase Database",
-						"description": "Create Subabase database to keep your project",
+						"title": "Fill Supabase Database",
+						"description": "Fill Subabase database with table and procedure to keep your project",
 						"media": {
 							"markdown": "media/scripts.md"
 						}

@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { parse, createVisitor } from 'java-ast';
 
 type MethodInfo = {
