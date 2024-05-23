@@ -1,6 +1,11 @@
 {
   "name": "automated-documentation-for-java",
   "displayName": "Automated documentation for Java",
+  "publisher": "AnastasiaMorozova",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anamrzv/vsc_automated_documentation"
+  },
   "description": "",
   "version": "0.0.1",
   "engines": {
